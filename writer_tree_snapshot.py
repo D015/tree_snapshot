@@ -1,6 +1,6 @@
 #!/usr/bin/python3
-import json
 import os
+import pickle
 from datetime import datetime
 
 start_root = '/'
@@ -10,10 +10,11 @@ snapshot_file = f'tree_snapshot_{datetime.now().strftime("%Y%m%d-%H%M%S")}'
 empty_directory_size = 1024
 
 
-def converting_file_list_to_dict_file_size(file_directory_root,
-                                           start_file_list):
-    final_file_dict = {}
-    sum_file_dict = {'size_all_files': 0}
+def converting_file_list_to_tuple_file_size(file_directory_root,
+                                            final_directory_tuple,
+                                            start_file_list):
+    final_file_tuple = []
+    sum_file_tuple = ['size_all_files', 0]
     for start_file_list_i in start_file_list:
         file_root = os.path.join(file_directory_root, start_file_list_i)
         try:
@@ -26,26 +27,32 @@ def converting_file_list_to_dict_file_size(file_directory_root,
             file_size = 0
             print(permission_error)
             print(f'PermissionError {file_root}')
-        final_file_dict_i = {start_file_list_i: file_size}
-        final_file_dict.update(final_file_dict_i)
-        sum_file_dict['size_all_files'] += file_size
-    return final_file_dict, sum_file_dict
+        final_file_tuple_i = (start_file_list_i, file_size)
+        final_file_tuple.append(final_file_tuple_i)
+        sum_file_tuple[1] += file_size
+    final_directory_tuple = tuple(final_directory_tuple)
+    final_file_tuple = tuple(final_file_tuple)
+    sum_file_tuple = tuple(sum_file_tuple)
+    return final_directory_tuple, final_file_tuple, sum_file_tuple
 
 
 
-class TreeWriterJSON:
+class TreeWriterPKL:
     def __init__(self, file_name='no_name', tree_start_path='/'):
         self.tree_start_path = tree_start_path
-        self.file_name = file_name + '.json'
-
-    def save_tree_snapshot_to_json(self):
-        with open(self.file_name, "w") as file_handler:
+        self.file_name = file_name + '.pkl'
+    tree_list = []
+    def save_tree_snapshot_to_pkl(self):
+        with open(self.file_name, "wb") as file_handler:
             for i in os.walk(self.tree_start_path):
-                file_dict, sum_dict = \
-                    converting_file_list_to_dict_file_size(i[0], i[2])
-                size_i = (i[0], i[1], file_dict, sum_dict)
-                file_handler.write(json.dumps(size_i))
-                file_handler.write('\n')
+                directory_tuple, file_tuple, sum_tuple = \
+                    converting_file_list_to_tuple_file_size(i[0], i[1], i[2])
+                size_i = (i[0], directory_tuple, file_tuple, sum_tuple)
+                self.tree_list.append(size_i)
+                # file_handler.write('\n')
+                # print(size_i)
+            tree_tuple = tuple(self.tree_list)
+            file_handler.write(pickle.dumps(tree_tuple))
         return True
 
         # for root, directories, files in os.walk(self.tree_start_path):
@@ -54,9 +61,9 @@ class TreeWriterJSON:
 
 class App:
     def run(self):
-        result = TreeWriterJSON(
+        result = TreeWriterPKL(
             file_name=snapshot_file,
-            tree_start_path=start_root).save_tree_snapshot_to_json()
+            tree_start_path=start_root).save_tree_snapshot_to_pkl()
         print(result)
 
 
