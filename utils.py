@@ -36,10 +36,14 @@ def converting_recursively_tuple_to_dict(data_tuple):
     elif type(data_tuple) == tuple:
         data_dict = {}
         for i_data_tuple in data_tuple:
-            if type(i_data_tuple) == tuple and type(i_data_tuple[0]) != tuple:
-                data_dict.update({i_data_tuple[0]: converting_recursively_tuple_to_dict(i_data_tuple[1])})
+            if type(i_data_tuple) == tuple:
+                data_dict.update(
+                    {i_data_tuple[0]:
+                         converting_recursively_tuple_to_dict(i_data_tuple[1])})
             elif len(data_tuple) == 2:
-                data_dict.update({data_tuple[0]: converting_recursively_tuple_to_dict(data_tuple[1])})
+                data_dict.update(
+                    {data_tuple[0]:
+                         converting_recursively_tuple_to_dict(data_tuple[1])})
         return data_dict
     elif type(data_tuple) != tuple:
         return data_tuple
