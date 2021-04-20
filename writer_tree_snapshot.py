@@ -22,10 +22,11 @@ class TreeSnapshotCreator:
 
     def save_tree_snapshot_to_tuple(self):
         for i in os.walk(self.tree_start_path):
-            if not(i[0].startswith('/proc')):
+            i_0 = i[0]
+            if not(i_0.startswith('/proc') or i_0.startswith('/dev')):
                 directory_tuple, file_tuple, sum_tuple = \
-                    converting_file_list_to_tuple_file_size(i[0], i[1], i[2])
-                size_i = (i[0], directory_tuple, file_tuple, sum_tuple)
+                    converting_file_list_to_tuple_file_size(i_0, i[1], i[2])
+                size_i = (i_0, directory_tuple, file_tuple, sum_tuple)
                 self.tree_list.append(size_i)
         tree_tuple = tuple(self.tree_list)
         return tree_tuple
