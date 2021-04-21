@@ -2,6 +2,8 @@ import os
 import pickle
 
 
+directory_size = 4096
+
 def converting_file_list_to_tuple_file_size(file_directory_root,
                                             final_directory_tuple,
                                             start_file_list):
@@ -42,12 +44,73 @@ def converting_tree_item_tuple_to_dict(tree_item_tuple):
     return tree_item_dict
 
 
-def compare_subdirectories():
-    pass
+def merge_differences_plus_or_minus(directory_difference, plus=True):
+    direction_of_change = 1 if plus == True else -1
+
+    result_difference = {}
+    for key_directory_difference, i_directory_difference \
+            in directory_difference.items():
+
+        i_files = i_directory_difference['files']
+        i_subdirectories = i_directory_difference['subdirectories']
+        i_specifications = \
+            {
+                i_directory_difference['specifications']['size'][0]:
+                    i_directory_difference['specifications']['size'][
+                        1],
+                'resize': 0
+            }
+
+        i_directory_difference_dict = \
+            {
+                key_directory_difference:
+                    {
+                        'subdirectories': {},
+                        'files': {},
+                        'specifications': i_specifications
+                    }
+            }
+
+        if i_subdirectories:
+            for d_i_subdirectory in i_subdirectories:
+                d_i_subdirectory_dict = \
+                    {
+                        d_i_subdirectory:
+                            {
+                                'size': directory_size,
+                                'resize': directory_size * direction_of_change
+                            }
+                    }
+
+                i_directory_difference_dict['specifications'] \
+                    ['resize'] += directory_size * direction_of_change
+
+                i_directory_difference_dict['specifications']. \
+                    update(d_i_subdirectory_dict)
+
+        if i_files:
+            for f_i_file in i_files:
+                f_i_file_dict = \
+                    {
+                        f_i_file[0]:
+                            {
+                                'size': f_i_file[1],
+                                'resize': f_i_file[1] * direction_of_change
+                            }
+                    }
+
+                i_directory_difference_dict['specifications'] \
+                    ['resize'] += f_i_file[1] * direction_of_change
+
+                i_directory_difference_dict['files']. \
+                    update(f_i_file_dict)
+
+        result_difference.update(i_directory_difference_dict)
+    return result_difference
 
 
 class WriterPKL:
-    def __init__(self, data='/', file_name='no_name'):
+    def __init__(self, data: str = '/', file_name='no_name'):
         self.data = data
         self.file_name = file_name + '.pkl'
 

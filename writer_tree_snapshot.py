@@ -10,7 +10,7 @@ test_start_root = '/home/dmitry'
 
 snapshot_file = f'tree_snapshot_{datetime.now().strftime("%Y%m%d-%H%M%S")}'
 test_snapshot_file = 'test'
-empty_directory_size = 1024
+empty_directory_size = 4096
 
 
 class TreeSnapshotCreator:

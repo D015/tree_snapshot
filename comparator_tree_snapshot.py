@@ -1,4 +1,6 @@
-from utils import ReaderPKL, converting_tree_item_tuple_to_dict
+from utils import (ReaderPKL,
+                   converting_tree_item_tuple_to_dict,
+                   merge_differences_plus_or_minus)
 
 
 class TreeSnapshotComparator:
@@ -18,9 +20,6 @@ class TreeSnapshotComparator:
                 converting_tree_item_tuple_to_dict(i_difference_start_tuple)
             difference_start_dict.update(i_difference_start_dict)
 
-        print('TEST===========================================================')
-        print(difference_start_dict)
-
         difference_end_set = end_data_set.difference(start_data_set)
         difference_end_tuple = tuple(difference_end_set)
         difference_end_dict = {}
@@ -38,18 +37,15 @@ class TreeSnapshotComparator:
 
         difference_minus_dict = {}
         for i_difference_minus_directories in difference_minus_directories:
-            i_difference_minus_dict\
+            i_difference_minus_dict \
                 = difference_start_dict.pop(i_difference_minus_directories)
             difference_minus_dict.update(
                 {i_difference_minus_directories: i_difference_minus_dict})
         difference_change_start_dict = difference_start_dict
 
-        print('TEST2==========================================================')
-        print(difference_change_start_dict)
-
         difference_plus_dict = {}
         for i_difference_plus_directories in difference_plus_directories:
-            i_difference_plus_dict\
+            i_difference_plus_dict \
                 = difference_end_dict.pop(i_difference_plus_directories)
             difference_plus_dict.update(
                 {i_difference_plus_directories: i_difference_plus_dict})
@@ -63,19 +59,51 @@ class TreeSnapshotComparator:
         }
         return differences
 
-    def compare_files(self):
-        differences = self.get_directory_difference()
-        difference_minus = differences['difference_plus']
-        difference_plus = differences['difference_plus']
+    def merge_differences(self):
+        directory_difference = self.get_directory_difference()
 
-        empty_difference = {'subdirectories': (),
-                            'files': (),
-                            'specifications': ('size_all_files', 0)}
-        for key_difference_plus, i_difference_plus in difference_plus.items():
-            i_difference_plus_files_tuple = i_difference_plus['filters']
-            i_difference_minus_files_tuple = \
-                difference_plus.get(
-                    key_difference_plus, empty_difference)['files']
+        comparison_result = {}
+
+        directory_difference_minus_dict = merge_differences_plus_or_minus(
+            directory_difference['difference_minus'], plus=False)
+        comparison_result.update(directory_difference_minus_dict)
+
+        directory_difference_plus_dict = merge_differences_plus_or_minus(
+            directory_difference['difference_plus'], plus=True)
+        comparison_result.update(directory_difference_plus_dict)
+
+        '-----------------------------------------------------------------'
+
+        difference_change_start = \
+            directory_difference['difference_change_start_dict']
+        difference_change_end = \
+            directory_difference['difference_change_end_dict']
+
+        for key_difference_change_end, i_difference_change_end \
+                in difference_change_end.items():
+
+            i_files = i_difference_change_end['files']
+            i_subdirectories = i_difference_change_end['subdirectories']
+
+            i_specifications = \
+                {
+                    i_difference_change_end['specifications']['size'][0]:
+                        i_difference_change_end['specifications']['size'][1],
+                    'resize': 0
+                }
+
+            i_directory_difference_change_dict = \
+                {
+                    key_difference_change_end:
+                        {
+                            'subdirectories': {},
+                            'files': {},
+                            'specifications': i_specifications
+                        }
+                }
+
+
+
 
     def write_comparison_to_pkl(self):
         pass
@@ -108,7 +136,6 @@ class App:
         for k, i in result['difference_change_start_dict'].items():
             print(k, i)
             print()
-
 
 
 if __name__ == '__main__':
