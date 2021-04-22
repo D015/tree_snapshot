@@ -1,8 +1,27 @@
 import os
 import pickle
 
-
 directory_size = 4096
+
+
+def get_dict_of_other_files_by_remove_keys_from_set(the_dict: dict,
+                                                    the_set: set,
+                                                    created: bool = True):
+    direction_of_created = 1 if created is True else -1
+
+    other_files_dict = {'files': {}, 'specifications': {'size': 0, 'resize': 0}}
+    if the_dict and the_set:
+        for key in the_set:
+            if key in the_dict:
+                value = the_dict.pop(key)
+                other_files_dict['files'].update({key: value})
+                other_files_dict['specifications']['size'] += value
+
+        other_files_dict['specifications']['resize'] = \
+            other_files_dict['specifications']['size'] * direction_of_created
+
+    return other_files_dict
+
 
 def converting_file_list_to_tuple_file_size(file_directory_root,
                                             final_directory_tuple,
@@ -45,7 +64,7 @@ def converting_tree_item_tuple_to_dict(tree_item_tuple):
 
 
 def merge_differences_plus_or_minus(directory_difference, plus=True):
-    direction_of_change = 1 if plus == True else -1
+    direction_of_change = 1 if plus is True else -1
 
     result_difference = {}
     for key_directory_difference, i_directory_difference \
@@ -107,6 +126,64 @@ def merge_differences_plus_or_minus(directory_difference, plus=True):
 
         result_difference.update(i_directory_difference_dict)
     return result_difference
+
+
+def merge_files_from_changed_directory(start_files: set, end_files: set):
+    files_from_changed_directory = \
+        {'files': {}, 'specifications': {'size': 0, 'resize': 0}}
+
+    difference_start_dict = dict(start_files.difference(end_files))
+    difference_end_dict = dict(start_files.difference(end_files))
+    #     Неизмененные файлы
+    identical_files_set = start_files.intersection(end_files)
+    identical_files_dict = dict(identical_files_set)
+    files_from_changed_directory['files'].update(identical_files_dict)
+    # Resized file names
+    resized_file_names_set = \
+        set(difference_start_dict).intersection(difference_end_dict)
+     # Deleted files
+    deleted_files_dict = get_dict_of_other_files_by_remove_keys_from_set(
+        difference_start_dict, resized_file_names_set, created=False)
+
+    resized_start_files_dict = difference_start_dict
+    files_from_changed_directory['files'].update(deleted_files_dict['files'])
+
+    files_from_changed_directory['specifications']['size'] += \
+        (deleted_files_dict['specifications']['size'])
+
+    files_from_changed_directory['specifications']['resize'] += \
+        (deleted_files_dict['specifications']['resize'])
+    # Created files
+    created_files_dict = get_dict_of_other_files_by_remove_keys_from_set(
+        difference_end_dict, resized_file_names_set, created=True)
+
+    resized_end_files_dict = difference_end_dict
+    files_from_changed_directory['files'].update(created_files_dict['files'])
+
+    files_from_changed_directory['specifications']['size'] += \
+        (created_files_dict['specifications']['size'])
+
+    files_from_changed_directory['specifications']['resize'] += \
+        (created_files_dict['specifications']['resize'])
+    # Resized file
+    resized_files_dict = \
+        {'files': {}, 'specifications': {'size': 0, 'resize': 0}}
+
+    for key in resized_end_files_dict:
+        size = resized_end_files_dict[key]
+        resize = size - resized_start_files_dict[key]
+        resized_files_dict.update({key: {'size': size, 'resize': resize}})
+        resized_files_dict['specifications']['size'] += size
+        resized_files_dict['specifications']['resize'] += resize
+    files_from_changed_directory['files'].update(resized_files_dict['files'])
+
+    files_from_changed_directory['specifications']['size'] += \
+        (resized_files_dict['specifications']['size'])
+
+    files_from_changed_directory['specifications']['resize'] += \
+        (resized_files_dict['specifications']['resize'])
+
+    return files_from_changed_directory
 
 
 class WriterPKL:

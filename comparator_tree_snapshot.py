@@ -82,8 +82,8 @@ class TreeSnapshotComparator:
         for key_difference_change_end, i_difference_change_end \
                 in difference_change_end.items():
 
-            i_files = i_difference_change_end['files']
             i_subdirectories = i_difference_change_end['subdirectories']
+            i_files = i_difference_change_end['files']
 
             i_specifications = \
                 {
@@ -101,6 +101,10 @@ class TreeSnapshotComparator:
                             'specifications': i_specifications
                         }
                 }
+
+    #         compare files
+
+
 
 
 
