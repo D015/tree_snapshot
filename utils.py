@@ -8,7 +8,6 @@ def get_dict_of_other_files_by_remove_keys_from_set(the_dict: dict,
                                                     the_set: set,
                                                     created: bool = True):
     direction_of_created = 1 if created is True else -1
-
     other_files_dict = {'files': {}, 'specifications': {'size': 0, 'resize': 0}}
     if the_dict and the_set:
         for key in the_set:
