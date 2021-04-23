@@ -1,113 +1,84 @@
+from dataclasses import dataclass
+
 from utils import (ReaderPKL,
                    converting_tree_item_tuple_to_dict,
-                   merge_differences_plus_or_minus)
+                   merge_other_directory, merge_modified_directory)
 
 
+@dataclass
 class TreeSnapshotComparator:
-    def __init__(self, start_snapshot, end_snapshot):
-        self.start_snapshot = start_snapshot
-        self.end_snapshot = end_snapshot
+    start_snapshot: str
+    end_snapshot: str
 
-    def get_directory_difference(self):
-        start_data_set = set(ReaderPKL(self.start_snapshot).read())
-        end_data_set = set(ReaderPKL(self.end_snapshot).read())
+    def get_differing_directories(self) -> dict:
+        start_data = set(ReaderPKL(self.start_snapshot).read())
+        end_data = set(ReaderPKL(self.end_snapshot).read())
+        # Getting tuple of differing start directories and converting into tuple
+        differing_start_dir_tuple = tuple(start_data.difference(end_data))
+        differing_start_directories = {}
+        for i_start_dir_tuple in differing_start_dir_tuple:
+            i_differing_start_directories = \
+                converting_tree_item_tuple_to_dict(i_start_dir_tuple)
+            differing_start_directories.update(i_differing_start_directories)
+        # Getting tuple of differing end directories and converting into tuple
+        differing_end_dir_tuple = tuple(end_data.difference(start_data))
+        differing_end_directories = {}
+        for i_end_dir_tuple in differing_end_dir_tuple:
+            i_differing_end_directories = \
+                converting_tree_item_tuple_to_dict(i_end_dir_tuple)
+            differing_end_directories.update(i_differing_end_directories)
+        # Getting deleted and created directory names
+        difference_start_directory_names = set(differing_start_directories)
+        difference_end_directory_names = set(differing_end_directories)
+        deleted_directory_names = \
+            difference_start_directory_names.difference(
+                difference_end_directory_names)
+        created_directory_names = \
+            difference_end_directory_names.difference(
+                difference_start_directory_names)
+        # Making dict of deleted directories and modified start directories
+        deleted_directories = {}
+        for i_deleted_directory_name in deleted_directory_names:
+            v_deleted_directory \
+                = differing_start_directories.pop(i_deleted_directory_name)
+            deleted_directories.update(
+                {i_deleted_directory_name: v_deleted_directory})
+        modified_start_directories = differing_start_directories
+        # Making dict of created directories and modified end directories
+        created_directories = {}
+        for i_created_directory_name in created_directory_names:
+            v_created_directory \
+                = differing_end_directories.pop(i_created_directory_name)
+            created_directories.update(
+                {i_created_directory_name: v_created_directory})
+        modified_end_directories = differing_end_directories
 
-        difference_start_set = start_data_set.difference(end_data_set)
-        difference_start_tuple = tuple(difference_start_set)
-        difference_start_dict = {}
-        for i_difference_start_tuple in difference_start_tuple:
-            i_difference_start_dict = \
-                converting_tree_item_tuple_to_dict(i_difference_start_tuple)
-            difference_start_dict.update(i_difference_start_dict)
-
-        difference_end_set = end_data_set.difference(start_data_set)
-        difference_end_tuple = tuple(difference_end_set)
-        difference_end_dict = {}
-        for i_difference_end_tuple in difference_end_tuple:
-            i_difference_end_dict = \
-                converting_tree_item_tuple_to_dict(i_difference_end_tuple)
-            difference_end_dict.update(i_difference_end_dict)
-
-        difference_start_directories = set(difference_start_dict.keys())
-        difference_end_directories = set(difference_end_dict.keys())
-        difference_minus_directories = \
-            difference_start_directories.difference(difference_end_directories)
-        difference_plus_directories = \
-            difference_end_directories.difference(difference_start_directories)
-
-        difference_minus_dict = {}
-        for i_difference_minus_directories in difference_minus_directories:
-            i_difference_minus_dict \
-                = difference_start_dict.pop(i_difference_minus_directories)
-            difference_minus_dict.update(
-                {i_difference_minus_directories: i_difference_minus_dict})
-        difference_change_start_dict = difference_start_dict
-
-        difference_plus_dict = {}
-        for i_difference_plus_directories in difference_plus_directories:
-            i_difference_plus_dict \
-                = difference_end_dict.pop(i_difference_plus_directories)
-            difference_plus_dict.update(
-                {i_difference_plus_directories: i_difference_plus_dict})
-        difference_change_end_dict = difference_end_dict
-
-        differences = {
-            'difference_minus': difference_minus_dict,
-            'difference_plus': difference_plus_dict,
-            'difference_change_start_dict': difference_change_start_dict,
-            'difference_change_end_dict': difference_change_end_dict
-        }
-        return differences
+        different_directories = {
+            'deleted_directories': deleted_directories,
+            'created_directories': created_directories,
+            'modified_start_directories': modified_start_directories,
+            'modified_end_directories': modified_end_directories}
+        return different_directories
 
     def merge_differences(self):
-        directory_difference = self.get_directory_difference()
+        differing_directories = self.get_differing_directories()
 
-        comparison_result = {}
+        merging_result = {}
 
-        directory_difference_minus_dict = merge_differences_plus_or_minus(
-            directory_difference['difference_minus'], plus=False)
-        comparison_result.update(directory_difference_minus_dict)
+        merged_deleted_directories = merge_other_directory(
+            differing_directories['deleted_directories'], created=False)
+        merging_result.update(merged_deleted_directories)
 
-        directory_difference_plus_dict = merge_differences_plus_or_minus(
-            directory_difference['difference_plus'], plus=True)
-        comparison_result.update(directory_difference_plus_dict)
+        merged_created_directories = merge_other_directory(
+            differing_directories['created_directories'], created=True)
+        merging_result.update(merged_created_directories)
 
-        '-----------------------------------------------------------------'
+        merged_modified_directories = merge_modified_directory(
+            differing_directories['modified_start_directories'],
+            differing_directories['modified_end_directories'])
+        merging_result.update(merged_modified_directories)
 
-        difference_change_start = \
-            directory_difference['difference_change_start_dict']
-        difference_change_end = \
-            directory_difference['difference_change_end_dict']
-
-        for key_difference_change_end, i_difference_change_end \
-                in difference_change_end.items():
-
-            i_subdirectories = i_difference_change_end['subdirectories']
-            i_files = i_difference_change_end['files']
-
-            i_specifications = \
-                {
-                    i_difference_change_end['specifications']['size'][0]:
-                        i_difference_change_end['specifications']['size'][1],
-                    'resize': 0
-                }
-
-            i_directory_difference_change_dict = \
-                {
-                    key_difference_change_end:
-                        {
-                            'subdirectories': {},
-                            'files': {},
-                            'specifications': i_specifications
-                        }
-                }
-
-    #         compare files
-
-
-
-
-
+        return merging_result
 
     def write_comparison_to_pkl(self):
         pass
@@ -121,7 +92,7 @@ class App:
     def run(self):
         result = TreeSnapshotComparator(
             start_snapshot=self.start_file,
-            end_snapshot=self.end_file).get_directory_difference()
+            end_snapshot=self.end_file).get_differing_directories()
 
         # test
         print('difference_minus-----------------------------------------------')
