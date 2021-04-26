@@ -126,7 +126,32 @@ def merge_other_directory(directory: dict, created: bool = True):
 
 def merge_modified_directory(modified_start_directories,
                              modified_end_directories):
-    pass
+    merging_result = {}
+    for k_directory_name, v_end_directory_content in modified_end_directories:
+        v_start_directory_content = modified_start_directories[k_directory_name]
+
+        merged_subdirectories = merge_subdirectories_from_modified_directory(
+            v_start_directory_content['subdirectories'],
+            v_end_directory_content['subdirectories'])
+
+        merged_files = merge_files_from_modified_directory(
+            v_start_directory_content['files'],
+            v_end_directory_content['files'])
+
+        i_specifications = {
+            'subdirectories_size':
+                merged_subdirectories['specifications']['subdirectories_size'],
+            'subdirectories_resize':
+                merged_subdirectories['specifications']['subdirectories_resize'],
+            'file_size': merged_files['specifications']['file_size'],
+            'file_resize': merged_files['specifications']['file_resize']}
+
+        merging_result.update({k_directory_name: {
+            'files': merged_files['files'],
+            'subdirectories': merged_subdirectories['subdirectories'],
+            'specifications': i_specifications
+        }})
+    return merging_result
 
 
 def merge_files_from_modified_directory(start_files: set, end_files: set):
@@ -134,10 +159,9 @@ def merge_files_from_modified_directory(start_files: set, end_files: set):
         {'files': {}, 'specifications': {'file_size': 0, 'file_resize': 0}}
 
     difference_start_dict = dict(start_files.difference(end_files))
-    difference_end_dict = dict(start_files.difference(end_files))
+    difference_end_dict = dict(end_files.difference(start_files))
     # Identical_files
     identical_files_set = start_files.intersection(end_files)
-    # identical_files_dict = dict(identical_files_set)
     identical_files_dict = {}
     for k_file_names, v_file_size in identical_files_set:
         identical_files_dict.update({k_file_names: {'size': v_file_size,
@@ -180,6 +204,50 @@ def merge_files_from_modified_directory(start_files: set, end_files: set):
         files_from_modified_directory['specifications']['file_resize'] += resize
 
     return files_from_modified_directory
+
+
+def merge_subdirectories_from_modified_directory(start_subdirectories: set,
+                                                 end_subdirectories: set):
+    subdirectories_from_modified_directory = \
+        {'subdirectories': {}, 'specifications': {'subdirectories_size': 0,
+                                                  'subdirectories_resize': 0}}
+
+    difference_start_set = start_subdirectories.difference(end_subdirectories)
+    difference_end_set = end_subdirectories.difference(start_subdirectories)
+    # Identical_subdirectories
+    identical_subdirectories_set = start_subdirectories.intersection(
+        end_subdirectories)
+    for i_subdirectory_names in identical_subdirectories_set:
+        subdirectories_from_modified_directory['subdirectories'].update(
+            {i_subdirectory_names: {'size': empty_directory_size,
+                                    'resize': 0}})
+
+    subdirectories_from_modified_directory[
+        'specifications']['subdirectories_size'] += \
+        len(identical_subdirectories_set) * empty_directory_size
+
+    # Deleted subdirectories
+    for i_subdirectory_names in difference_start_set:
+        subdirectories_from_modified_directory['subdirectories'].update(
+            {i_subdirectory_names: {'size': 0,
+                                    'resize': -empty_directory_size}})
+    subdirectories_from_modified_directory[
+        'specifications']['subdirectories_resize'] -= \
+        len(difference_start_set) * empty_directory_size
+
+    # Created subdirectories
+    for i_subdirectory_names in difference_end_set:
+        subdirectories_from_modified_directory['subdirectories'].update(
+            {i_subdirectory_names: {'size': empty_directory_size,
+                                    'resize': empty_directory_size}})
+    subdirectories_size = len(difference_end_set) * empty_directory_size
+    subdirectories_from_modified_directory[
+        'specifications']['subdirectories_size'] += subdirectories_size
+
+    subdirectories_from_modified_directory[
+        'specifications']['subdirectories_resize'] += subdirectories_size
+
+    return subdirectories_from_modified_directory
 
 
 class WriterPKL:
