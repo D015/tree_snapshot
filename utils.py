@@ -164,10 +164,10 @@ def merge_files_from_modified_directory(start_files: tuple, end_files: tuple):
     files_from_modified_directory = \
         {'files': {}, 'specifications': {'file_size': 0, 'file_resize': 0}}
 
-    difference_start_dict = dict(set(start_files).difference(set(end_files)))
-    difference_end_dict = dict(set(end_files).difference(set(start_files)))
+    difference_start_dict = dict(set(start_files) - set(end_files))
+    difference_end_dict = dict(set(end_files) - set(start_files))
     # Identical_files
-    identical_files_set = set(start_files).intersection(set(end_files))
+    identical_files_set = set(start_files) & (set(end_files))
     identical_files_dict = {}
     for k_file_names, v_file_size in identical_files_set:
         identical_files_dict.update({k_file_names: {'size': v_file_size,
@@ -178,7 +178,7 @@ def merge_files_from_modified_directory(start_files: tuple, end_files: tuple):
         sum([x[1] for x in identical_files_set])
     # Deleted file names
     deleted_file_names_set = \
-        set(difference_start_dict).difference(set(difference_end_dict))
+        set(difference_start_dict) - set(difference_end_dict)
     # Deleted files
     deleted_files_dict = get_dict_of_resized_files_by_remove_keys_from_set(
         difference_start_dict, deleted_file_names_set, created=False)
@@ -191,7 +191,7 @@ def merge_files_from_modified_directory(start_files: tuple, end_files: tuple):
             (deleted_files_dict['specifications']['file_resize'])
     # Created file names
     created_file_names_set = \
-        set(difference_end_dict).difference(set(difference_start_dict))
+        set(difference_end_dict) - set(difference_start_dict)
     # Created files
     created_files_dict = get_dict_of_resized_files_by_remove_keys_from_set(
         difference_end_dict, created_file_names_set, created=True)
@@ -223,14 +223,12 @@ def merge_subdirectories_from_modified_directory(start_subdirectories: tuple,
         {'subdirectories': {}, 'specifications': {'subdirectories_size': 0,
                                                   'subdirectories_resize': 0}}
 
-    difference_start_set = set(start_subdirectories).difference(
-        set(end_subdirectories))
+    difference_start_set = set(start_subdirectories) - (set(end_subdirectories))
 
-    difference_end_set = set(end_subdirectories).difference(
-        set(start_subdirectories))
+    difference_end_set = set(end_subdirectories) - (set(start_subdirectories))
     # Identical_subdirectories
-    identical_subdirectories_set = set(start_subdirectories).intersection(
-        set(end_subdirectories))
+    identical_subdirectories_set = \
+        set(start_subdirectories) & (set(end_subdirectories))
 
     for i_subdirectory_names in identical_subdirectories_set:
         subdirectories_from_modified_directory['subdirectories'].update(

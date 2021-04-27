@@ -15,14 +15,14 @@ class TreeSnapshotComparator:
         start_data = set(ReaderPKL(self.start_snapshot).read())
         end_data = set(ReaderPKL(self.end_snapshot).read())
         # Getting tuple of differing start directories and converting into tuple
-        differing_start_dir_tuple = tuple(start_data.difference(end_data))
+        differing_start_dir_tuple = tuple(start_data - end_data)
         differing_start_directories = {}
         for i_start_dir_tuple in differing_start_dir_tuple:
             i_differing_start_directories = \
                 converting_tree_item_tuple_to_dict(i_start_dir_tuple)
             differing_start_directories.update(i_differing_start_directories)
         # Getting tuple of differing end directories and converting into tuple
-        differing_end_dir_tuple = tuple(end_data.difference(start_data))
+        differing_end_dir_tuple = tuple(end_data - start_data)
         differing_end_directories = {}
         for i_end_dir_tuple in differing_end_dir_tuple:
             i_differing_end_directories = \
@@ -32,11 +32,9 @@ class TreeSnapshotComparator:
         difference_start_directory_names = set(differing_start_directories)
         difference_end_directory_names = set(differing_end_directories)
         deleted_directory_names = \
-            difference_start_directory_names.difference(
-                difference_end_directory_names)
+            difference_start_directory_names - difference_end_directory_names
         created_directory_names = \
-            difference_end_directory_names.difference(
-                difference_start_directory_names)
+            difference_end_directory_names - difference_start_directory_names
         # Making dict of deleted directories and modified start directories
         deleted_directories = {}
         for i_deleted_directory_name in deleted_directory_names:
@@ -123,5 +121,5 @@ class App:
 
 
 if __name__ == '__main__':
-    App(start_file='start_test.pkl',
-        end_file='end_test_4.pkl').run()
+    App(start_file='end_test_4.pkl',
+        end_file='end_test_5.pkl').run()
