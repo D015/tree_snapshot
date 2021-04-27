@@ -5,10 +5,11 @@ from datetime import datetime
 from utils import WriterPKL
 
 start_root = '/'
-test_start_root = '/home/dmitry'
-
 snapshot_file = f'tree_snapshot_{datetime.now().strftime("%Y%m%d-%H%M%S")}'
-test_snapshot_file = 'test'
+
+test_snapshot_file = 'end_test_4'
+test_start_root = '/home/dmitry/Coding/General/scripts'
+
 empty_directory_size = 4096
 
 
@@ -85,5 +86,5 @@ class App:
 
 
 if __name__ == '__main__':
-    App(file_name=snapshot_file,
-        tree_start_path=start_root).run()
+    App(file_name=test_snapshot_file,
+        tree_start_path=test_start_root).run()

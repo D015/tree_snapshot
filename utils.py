@@ -23,36 +23,36 @@ def converting_tree_item_tuple_to_dict(tree_item_tuple):
     tree_item_dict = {
         tree_item_tuple[0]: {
             'subdirectories': tree_item_tuple[1],
-            'files': tree_item_tuple[2],
-            'specifications': tree_item_tuple[3]
+            'files': tree_item_tuple[2]
         }
     }
     return tree_item_dict
 
 
-def get_dict_of_other_files_by_remove_keys_from_set(the_dict: dict,
-                                                    the_set: set,
-                                                    created: bool = True):
+def get_dict_of_resized_files_by_remove_keys_from_set(the_dict: dict,
+                                                      the_set: set,
+                                                      created: bool = True):
     direction_of_created = 1 if created is True else -1
-    other_files_dict = {'files': {},
-                        'specifications': {'file_size': 0, 'file_resize': 0}}
+    resized_files_dict = {'files': {},
+                          'specifications': {'file_size': 0, 'file_resize': 0}}
     if the_dict and the_set:
         for key in the_set:
             if key in the_dict:
                 value = the_dict.pop(key)
                 the_file_size = value if created else 0
                 the_file_resize = value * direction_of_created
-                other_files_dict['files'].update(
+                resized_files_dict['files'].update(
                     {key: {'size': the_file_size, 'resize': the_file_resize}})
 
-                other_files_dict['specifications']['file_size'] += the_file_size
-                other_files_dict['specifications']['file_resize'] += \
+                resized_files_dict['specifications']['file_size'] += \
+                    the_file_size
+                resized_files_dict['specifications']['file_resize'] += \
                     the_file_resize
 
         if not created:
-            other_files_dict['specifications']['file_size'] = 0
+            resized_files_dict['specifications']['file_size'] = 0
 
-    return other_files_dict
+    return resized_files_dict
 
 
 def merge_other_directory(directory: dict, created: bool = True):
@@ -98,9 +98,10 @@ def merge_other_directory(directory: dict, created: bool = True):
                 i_directory_dict['subdirectories'].update(i_subdirectory_dict)
 
             subdirectory_size = len(i_subdirectories) * empty_directory_size
-            i_directory_dict['specifications']['subdirectory_size'] = \
+            i_directory_dict[
+                k_directory_name]['specifications']['subdirectory_size'] = \
                 subdirectory_size
-            i_directory_dict['specifications']['resize'] += \
+            i_directory_dict[k_directory_name]['specifications']['resize'] += \
                 subdirectory_size * direction_of_change
 
         if i_files:
@@ -114,12 +115,16 @@ def merge_other_directory(directory: dict, created: bool = True):
                             }
                     }
 
-                i_directory_dict['specifications']['file_size'] += \
+                i_directory_dict[
+                    k_directory_name]['specifications']['file_size'] += \
                     f_i_file[1]
-                i_directory_dict['specifications']['file_resize'] += \
+                i_directory_dict[
+                    k_directory_name]['specifications']['file_resize'] += \
                     f_i_file[1] * direction_of_change
 
-                i_directory_dict['files'].update(f_i_file_dict)
+                i_directory_dict[k_directory_name]['files'].\
+                    update(f_i_file_dict)
+
         merging_result.update(i_directory_dict)
     return merging_result
 
@@ -127,7 +132,8 @@ def merge_other_directory(directory: dict, created: bool = True):
 def merge_modified_directory(modified_start_directories,
                              modified_end_directories):
     merging_result = {}
-    for k_directory_name, v_end_directory_content in modified_end_directories:
+    for k_directory_name, v_end_directory_content \
+            in modified_end_directories.items():
         v_start_directory_content = modified_start_directories[k_directory_name]
 
         merged_subdirectories = merge_subdirectories_from_modified_directory(
@@ -154,14 +160,14 @@ def merge_modified_directory(modified_start_directories,
     return merging_result
 
 
-def merge_files_from_modified_directory(start_files: set, end_files: set):
+def merge_files_from_modified_directory(start_files: tuple, end_files: tuple):
     files_from_modified_directory = \
         {'files': {}, 'specifications': {'file_size': 0, 'file_resize': 0}}
 
-    difference_start_dict = dict(start_files.difference(end_files))
-    difference_end_dict = dict(end_files.difference(start_files))
+    difference_start_dict = dict(set(start_files).difference(set(end_files)))
+    difference_end_dict = dict(set(end_files).difference(set(start_files)))
     # Identical_files
-    identical_files_set = start_files.intersection(end_files)
+    identical_files_set = set(start_files).intersection(set(end_files))
     identical_files_dict = {}
     for k_file_names, v_file_size in identical_files_set:
         identical_files_dict.update({k_file_names: {'size': v_file_size,
@@ -170,30 +176,35 @@ def merge_files_from_modified_directory(start_files: set, end_files: set):
     files_from_modified_directory['files'].update(identical_files_dict)
     files_from_modified_directory['specifications']['file_size'] = \
         sum([x[1] for x in identical_files_set])
-    # Resized file names
-    resized_file_names_set = \
-        set(difference_start_dict).intersection(set(difference_end_dict))
+    # Deleted file names
+    deleted_file_names_set = \
+        set(difference_start_dict).difference(set(difference_end_dict))
     # Deleted files
-    deleted_files_dict = get_dict_of_other_files_by_remove_keys_from_set(
-        difference_start_dict, resized_file_names_set, created=False)
+    deleted_files_dict = get_dict_of_resized_files_by_remove_keys_from_set(
+        difference_start_dict, deleted_file_names_set, created=False)
     # Removed items of deleted files from difference_start_dict
     resized_start_files_dict = difference_start_dict
-    files_from_modified_directory['files'].update(deleted_files_dict['files'])
+    if deleted_files_dict['files']:
+        files_from_modified_directory['files'].update(deleted_files_dict['files'])
 
-    files_from_modified_directory['specifications']['file_resize'] += \
-        (deleted_files_dict['specifications']['file_resize'])
+        files_from_modified_directory['specifications']['file_resize'] += \
+            (deleted_files_dict['specifications']['file_resize'])
+    # Created file names
+    created_file_names_set = \
+        set(difference_end_dict).difference(set(difference_start_dict))
     # Created files
-    created_files_dict = get_dict_of_other_files_by_remove_keys_from_set(
-        difference_end_dict, resized_file_names_set, created=True)
+    created_files_dict = get_dict_of_resized_files_by_remove_keys_from_set(
+        difference_end_dict, created_file_names_set, created=True)
     # Removed items of created files from created_start_dict
     resized_end_files_dict = difference_end_dict
-    files_from_modified_directory['files'].update(created_files_dict['files'])
+    if created_files_dict['files']:
+        files_from_modified_directory['files'].update(created_files_dict['files'])
 
-    files_from_modified_directory['specifications']['file_size'] += \
-        (created_files_dict['specifications']['file_size'])
+        files_from_modified_directory['specifications']['file_size'] += \
+            (created_files_dict['specifications']['file_size'])
 
-    files_from_modified_directory['specifications']['file_resize'] += \
-        (created_files_dict['specifications']['file_resize'])
+        files_from_modified_directory['specifications']['file_resize'] += \
+            (created_files_dict['specifications']['file_resize'])
     # Resized file
     for key in resized_end_files_dict:
         size = resized_end_files_dict[key]
@@ -206,17 +217,21 @@ def merge_files_from_modified_directory(start_files: set, end_files: set):
     return files_from_modified_directory
 
 
-def merge_subdirectories_from_modified_directory(start_subdirectories: set,
-                                                 end_subdirectories: set):
+def merge_subdirectories_from_modified_directory(start_subdirectories: tuple,
+                                                 end_subdirectories: tuple):
     subdirectories_from_modified_directory = \
         {'subdirectories': {}, 'specifications': {'subdirectories_size': 0,
                                                   'subdirectories_resize': 0}}
 
-    difference_start_set = start_subdirectories.difference(end_subdirectories)
-    difference_end_set = end_subdirectories.difference(start_subdirectories)
+    difference_start_set = set(start_subdirectories).difference(
+        set(end_subdirectories))
+
+    difference_end_set = set(end_subdirectories).difference(
+        set(start_subdirectories))
     # Identical_subdirectories
-    identical_subdirectories_set = start_subdirectories.intersection(
-        end_subdirectories)
+    identical_subdirectories_set = set(start_subdirectories).intersection(
+        set(end_subdirectories))
+
     for i_subdirectory_names in identical_subdirectories_set:
         subdirectories_from_modified_directory['subdirectories'].update(
             {i_subdirectory_names: {'size': empty_directory_size,

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pprint import pprint
 
 from utils import (ReaderPKL,
                    converting_tree_item_tuple_to_dict,
@@ -92,27 +93,35 @@ class App:
     def run(self):
         result = TreeSnapshotComparator(
             start_snapshot=self.start_file,
-            end_snapshot=self.end_file).get_differing_directories()
+            end_snapshot=self.end_file).merge_differences()
+        pprint(result)
 
-        # test
-        print('difference_minus-----------------------------------------------')
-        for k, i in result['difference_minus'].items():
-            print(k, i)
-            print()
-        print('difference_plus++++++++++++++++++++++++++++++++++++++++++++++++')
-        for k, i in result['difference_plus'].items():
-            print(k, i)
-            print()
-        print('difference_change_start_dict ssssssssssssssssssssssssssssssssss')
-        for k, i in result['difference_change_start_dict'].items():
-            print(k, i)
-            print()
-        print('difference_change_end_dict eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee')
-        for k, i in result['difference_change_start_dict'].items():
-            print(k, i)
-            print()
+        # for k, v in result.items():
+        #     print(k, v, sep=' - ')
+        #
+        #     for k_file_name, v_file_spec in v['files'].items():
+        #         if v_file_spec['resize'] != 0:
+        #             print(k_file_name, v_file_spec, sep=' - ')
+
+        # # test
+        # print('difference_minus-----------------------------------------------')
+        # for k, i in result['difference_minus'].items():
+        #     print(k, i)
+        #     print()
+        # print('difference_plus++++++++++++++++++++++++++++++++++++++++++++++++')
+        # for k, i in result['difference_plus'].items():
+        #     print(k, i)
+        #     print()
+        # print('difference_change_start_dict ssssssssssssssssssssssssssssssssss')
+        # for k, i in result['difference_change_start_dict'].items():
+        #     print(k, i)
+        #     print()
+        # print('difference_change_end_dict eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee')
+        # for k, i in result['difference_change_start_dict'].items():
+        #     print(k, i)
+        #     print()
 
 
 if __name__ == '__main__':
-    App(start_file='tree_snapshot_20210419-141901.pkl',
-        end_file='tree_snapshot_20210419-142903.pkl').run()
+    App(start_file='start_test.pkl',
+        end_file='end_test_4.pkl').run()
