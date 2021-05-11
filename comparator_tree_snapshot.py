@@ -1,9 +1,61 @@
+import copy
+import operator
+import os
 from dataclasses import dataclass
 from pprint import pprint
+from typing import Union, Dict, List, Tuple
 
 from utils import (ReaderPKL,
                    converting_tree_item_tuple_to_dict,
-                   merge_other_directory, merge_modified_directory)
+                   merge_other_directory, merge_modified_directory,
+                   empty_directory_size, sort_dictionary_by_keys_into_list)
+
+
+def create_directories_with_parent(
+        directory: Tuple,
+        copy_of_all_directories: Dict) -> None:
+    directory_name, directory_content = directory
+    directory_size = directory_content['specifications']['directory_size']
+    directory_resize = directory_content['specifications']['directory_resize']
+    data = (directory_name, directory_size, directory_resize,
+            copy_of_all_directories)
+    while directory_name != '/':
+        data = add_one_parent_directory(*data)
+        directory_name, s, r, c = data
+    n, s, r, copy_of_all_directories = data
+    return copy_of_all_directories
+
+
+def add_one_parent_directory(directory_name: str,
+                             directory_size: int,
+                             directory_resize: int,
+                             parent_directories: dict) -> Union[tuple, bool]:
+    parent_directory_name = os.path.dirname(directory_name)
+    is_root = parent_directory_name == directory_name
+    if is_root:
+        return False
+    parent_directory_size = directory_size + empty_directory_size
+
+    parent_directory_resize = directory_resize
+
+    specifications = {
+        'specifications': {'directory_size': parent_directory_size,
+                           'directory_resize': parent_directory_resize}}
+    parent_directory = {parent_directory_name: specifications}
+    if not (parent_directory_name in parent_directories):
+        parent_directories.update(parent_directory)
+    else:
+        parent_directories[
+            parent_directory_name]['specifications']['directory_size'] \
+            += specifications['specifications']['directory_size']
+
+        parent_directories[
+            parent_directory_name]['specifications']['directory_resize'] \
+            += specifications['specifications']['directory_resize']
+
+    result = (parent_directory_name, directory_size, directory_resize,
+              parent_directories)
+    return result
 
 
 @dataclass
@@ -79,8 +131,25 @@ class TreeSnapshotComparator:
 
         return merging_result
 
-    def write_comparison_to_pkl(self):
-        pass
+
+@dataclass
+class DirectoryHierarchyCreator:
+    merged_directories: Dict
+
+    def add_parent_directory_in_hierarchy(self) -> List[Tuple]:
+        copy_of_all_directories = copy.deepcopy(self.merged_directories)
+        for i_directory in self.merged_directories.items():
+
+            copy_of_all_directories = \
+                create_directories_with_parent(i_directory,
+                                               copy_of_all_directories)
+        # todo Use copy or " = " &
+        directories_with_parent = copy_of_all_directories.copy()
+
+        directories_with_parents_in_hierarchy: List[Tuple] = \
+            sort_dictionary_by_keys_into_list(directories_with_parent)
+
+        return directories_with_parents_in_hierarchy
 
 
 class App:
@@ -89,37 +158,35 @@ class App:
         self.end_file = end_file
 
     def run(self):
-        result = TreeSnapshotComparator(
+        merged_directories = TreeSnapshotComparator(
             start_snapshot=self.start_file,
             end_snapshot=self.end_file).merge_differences()
-        pprint(result)
+        resize = 0
+        for n, directory_content in merged_directories.items():
+            resize += directory_content['specifications']['directory_resize']
+        print(resize)
+        result = DirectoryHierarchyCreator(
+            merged_directories=merged_directories). \
+            add_parent_directory_in_hierarchy()
 
-        # for k, v in result.items():
-        #     print(k, v, sep=' - ')
-        #
-        #     for k_file_name, v_file_spec in v['files'].items():
-        #         if v_file_spec['resize'] != 0:
-        #             print(k_file_name, v_file_spec, sep=' - ')
+        r = 0
 
-        # # test
-        # print('difference_minus-----------------------------------------------')
-        # for k, i in result['difference_minus'].items():
-        #     print(k, i)
-        #     print()
-        # print('difference_plus++++++++++++++++++++++++++++++++++++++++++++++++')
-        # for k, i in result['difference_plus'].items():
-        #     print(k, i)
-        #     print()
-        # print('difference_change_start_dict ssssssssssssssssssssssssssssssssss')
-        # for k, i in result['difference_change_start_dict'].items():
-        #     print(k, i)
-        #     print()
-        # print('difference_change_end_dict eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee')
-        # for k, i in result['difference_change_start_dict'].items():
-        #     print(k, i)
-        #     print()
+        for k_directory, i_content in result:
+            # if '/var/lib/' in k_directory:
+            #     r += i_content['specifications']['directory_resize']
+
+            # if i_content['specifications']['directory_resize'] > 1000000:
+            # if '/var/lib' in k_directory:
+
+            if k_directory.count('/') == 1 or k_directory.count('/') == 2 or k_directory.count('/') == 3:
+                print(round((i_content['specifications'][
+                                 'directory_resize'] / 1024 / 1024), 2))
+                print(k_directory)
+                pprint(i_content['specifications'])
+                print()
+        # print(r)
 
 
 if __name__ == '__main__':
-    App(start_file='end_test_4.pkl',
-        end_file='end_test_5.pkl').run()
+    App(start_file='tree_snapshot_20210427-150027.pkl',
+        end_file='tree_snapshot_20210509-011538.pkl').run()

@@ -1,4 +1,7 @@
+import operator
+import os
 import pickle
+from typing import Union, Optional, List, Tuple, Dict
 
 empty_directory_size = 4096
 
@@ -20,10 +23,11 @@ directory_sample_dict = \
 
 
 def converting_tree_item_tuple_to_dict(tree_item_tuple):
+    directory, subdirectories, files = tree_item_tuple
     tree_item_dict = {
-        tree_item_tuple[0]: {
-            'subdirectories': tree_item_tuple[1],
-            'files': tree_item_tuple[2]
+        directory: {
+            'subdirectories': subdirectories,
+            'files': files
         }
     }
     return tree_item_dict
@@ -56,7 +60,7 @@ def get_dict_of_resized_files_by_remove_keys_from_set(the_dict: dict,
 
 
 def merge_other_directory(directory: dict, created: bool = True):
-    direction_of_change = 1 if created is True else -1
+    direction_of_change = 1 if created else -1
 
     merging_result = {}
     for k_directory_name, v_directory_contents \
@@ -95,13 +99,15 @@ def merge_other_directory(directory: dict, created: bool = True):
                             }
                     }
 
-                i_directory_dict['subdirectories'].update(i_subdirectory_dict)
+                i_directory_dict[k_directory_name]['subdirectories']. \
+                    update(i_subdirectory_dict)
 
             subdirectory_size = len(i_subdirectories) * empty_directory_size
             i_directory_dict[
                 k_directory_name]['specifications']['subdirectory_size'] = \
                 subdirectory_size
-            i_directory_dict[k_directory_name]['specifications']['resize'] += \
+            i_directory_dict[
+                k_directory_name]['specifications']['subdirectory_resize'] += \
                 subdirectory_size * direction_of_change
 
         if i_files:
@@ -122,8 +128,22 @@ def merge_other_directory(directory: dict, created: bool = True):
                     k_directory_name]['specifications']['file_resize'] += \
                     f_i_file[1] * direction_of_change
 
-                i_directory_dict[k_directory_name]['files'].\
+                i_directory_dict[k_directory_name]['files']. \
                     update(f_i_file_dict)
+
+        i_directory_dict[
+            k_directory_name]['specifications']['directory_size'] = \
+            i_directory_dict[
+                k_directory_name]['specifications']['subdirectory_size'] \
+            + i_directory_dict[
+                k_directory_name]['specifications']['file_size']
+
+        i_directory_dict[
+            k_directory_name]['specifications']['directory_resize'] = \
+            i_directory_dict[
+                k_directory_name]['specifications']['subdirectory_resize'] \
+            + i_directory_dict[
+                k_directory_name]['specifications']['file_resize']
 
         merging_result.update(i_directory_dict)
     return merging_result
@@ -144,11 +164,22 @@ def merge_modified_directory(modified_start_directories,
             v_start_directory_content['files'],
             v_end_directory_content['files'])
 
+        directory_size = \
+            merged_subdirectories['specifications']['subdirectories_size'] + \
+            merged_files['specifications']['file_size']
+
+        directory_resize = \
+            merged_subdirectories['specifications']['subdirectories_resize'] + \
+            merged_files['specifications']['file_resize']
+
         i_specifications = {
+            'directory_size': directory_size,
+            'directory_resize': directory_resize,
             'subdirectories_size':
                 merged_subdirectories['specifications']['subdirectories_size'],
             'subdirectories_resize':
-                merged_subdirectories['specifications']['subdirectories_resize'],
+                merged_subdirectories['specifications'][
+                    'subdirectories_resize'],
             'file_size': merged_files['specifications']['file_size'],
             'file_resize': merged_files['specifications']['file_resize']}
 
@@ -185,7 +216,8 @@ def merge_files_from_modified_directory(start_files: tuple, end_files: tuple):
     # Removed items of deleted files from difference_start_dict
     resized_start_files_dict = difference_start_dict
     if deleted_files_dict['files']:
-        files_from_modified_directory['files'].update(deleted_files_dict['files'])
+        files_from_modified_directory['files'].update(
+            deleted_files_dict['files'])
 
         files_from_modified_directory['specifications']['file_resize'] += \
             (deleted_files_dict['specifications']['file_resize'])
@@ -198,7 +230,8 @@ def merge_files_from_modified_directory(start_files: tuple, end_files: tuple):
     # Removed items of created files from created_start_dict
     resized_end_files_dict = difference_end_dict
     if created_files_dict['files']:
-        files_from_modified_directory['files'].update(created_files_dict['files'])
+        files_from_modified_directory['files'].update(
+            created_files_dict['files'])
 
         files_from_modified_directory['specifications']['file_size'] += \
             (created_files_dict['specifications']['file_size'])
@@ -261,6 +294,21 @@ def merge_subdirectories_from_modified_directory(start_subdirectories: tuple,
         'specifications']['subdirectories_resize'] += subdirectories_size
 
     return subdirectories_from_modified_directory
+
+
+# todo (mentor) typing and validating the argument with the return False (isn't it superfluous?)
+# todo (mentor) типизация и проверка аргумента с возвратом False (это не лишнее?)
+# todo copy to global utilities
+def sort_dictionary_by_keys_into_list(
+        dictionary: Dict) -> Union[List[Tuple], bool]:
+    if type(dictionary) is dict:
+        if dictionary:
+            sorted_dictionary = sorted(dictionary.items(),
+                                       key=operator.itemgetter(0))
+            return sorted_dictionary
+        else:
+            return [tuple()]
+    return False
 
 
 class WriterPKL:
